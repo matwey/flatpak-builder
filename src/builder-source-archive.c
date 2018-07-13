@@ -597,15 +597,26 @@ create_uncompress_directory (BuilderSourceArchive *self, GFile *dest, GError **e
 
 static gboolean
 git (GFile   *dir,
+     char   **output,
      GError **error,
      ...)
 {
   gboolean res;
   va_list ap;
 
+  if (output != NULL)
+    *output = NULL;
+
   va_start (ap, error);
-  res = flatpak_spawn (dir, NULL, 0, error, "git", ap);
+  res = flatpak_spawn (dir, output, 0, error, "git", ap);
   va_end (ap);
+
+  if (output != NULL &&
+      (*output != NULL && *output[0] == '\0'))
+    {
+      g_free (*output);
+      *output = NULL;
+    }
 
   return res;
 }
@@ -617,9 +628,9 @@ init_git (GFile   *dir,
   char *basename;
 
   basename = g_file_get_basename (dir);
-  if (!git (dir, error, "init", NULL) ||
-      !git (dir, error, "add", "--ignore-errors", ".", NULL) ||
-      !git (dir, error, "commit", "-m", basename, NULL))
+  if (!git (dir, NULL, error, "init", NULL) ||
+      !git (dir, NULL, error, "add", "--ignore-errors", ".", NULL) ||
+      !git (dir, NULL, error, "commit", "-m", basename, NULL))
     {
       g_free (basename);
       return FALSE;
