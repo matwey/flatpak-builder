@@ -638,18 +638,42 @@ static gboolean
 init_git (GFile   *dir,
           GError **error)
 {
-  char *basename;
+  char *basename, *user, *email;
+  gboolean ret;
 
   basename = g_file_get_basename (dir);
   if (!git (dir, NULL, error, "init", NULL) ||
-      !git (dir, NULL, error, "add", "--ignore-errors", ".", NULL) ||
-      !git (dir, NULL, error, "commit", "-m", basename, NULL))
+      !git (dir, NULL, error, "add", "--ignore-errors", ".", NULL))
     {
       g_free (basename);
       return FALSE;
     }
 
-  return TRUE;
+  /* Have an email for author and committer */
+  if (!git (dir, &email, NULL, "config", "--get", "user.email", NULL) ||
+      email == NULL)
+    email = g_strdup ("flatpak-builder-commit@flatpak.org");
+  else
+    email = trim_linefeed (email);
+  g_setenv ("GIT_AUTHOR_EMAIL", email, FALSE);
+  g_setenv ("GIT_COMMITTER_EMAIL", email, FALSE);
+  g_free (email);
+
+  /* Have a "real name" for author and committer */
+  if (!git (dir, &user, NULL, "config", "--get", "user.name", NULL) ||
+      user == NULL)
+    user = g_strdup_printf ("%s Flatpak developers", basename);
+  else
+    user = trim_linefeed (user);
+  g_setenv ("GIT_AUTHOR_NAME", user, FALSE);
+  g_setenv ("GIT_COMMITTER_NAME", user, FALSE);
+  g_free (user);
+
+  ret = git (dir, NULL, error, "commit", "-m", basename, NULL);
+
+  g_free (basename);
+
+  return ret;
 }
 
 static gboolean
