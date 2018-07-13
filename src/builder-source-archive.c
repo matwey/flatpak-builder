@@ -621,6 +621,19 @@ git (GFile   *dir,
   return res;
 }
 
+static char *
+trim_linefeed (char *str)
+{
+  guint len;
+
+  g_return_val_if_fail (str != NULL, NULL);
+
+  len = strlen (str);
+  str[len] = '\0';
+
+  return str;
+}
+
 static gboolean
 init_git (GFile   *dir,
           GError **error)
